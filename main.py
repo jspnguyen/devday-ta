@@ -36,7 +36,7 @@ def llm_query(user_query, rag_results):
     """
     Queries response from LLM using RAG results and current LLM model
     """
-    llm = Bedrock(model="anthropic.claude-v2", temperature=0, max_tokens=3000)
+    llm = Bedrock(model="anthropic.claude-3-sonnet-20240229-v1:0", temperature=0.1, max_tokens=4096)
     
     response_synthesizer = get_response_synthesizer(
         response_mode="compact", llm=llm
@@ -46,8 +46,19 @@ def llm_query(user_query, rag_results):
     return str(response_obj)
 
 def chat_with_bot(user_input, _):
-    rag_results = rag_query(user_input)
-    llm_response = llm_query(user_input, rag_results)
+    """
+    Handle chatbot responses with users. Control personality and accuracy of the responses.
+    """
+    personality = (
+        "You are a friendly and knowledgeable CS70 TA. "
+        "You are patient, encouraging, and always provide detailed explanations. "
+        "You enjoy making learning fun and engaging for students."
+    )
+    
+    formatted_input = f'{personality}\n\nUser prompt:\n{user_input}'
+    
+    rag_results = rag_query(formatted_input)
+    llm_response = llm_query(formatted_input, rag_results)
     
     return llm_response
 
