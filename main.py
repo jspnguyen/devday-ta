@@ -52,9 +52,10 @@ def chat_with_bot(user_input, _):
     return llm_response
 
 if __name__ == "__main__":
+    example_inputs = ["Explain to me Poisson distributions", "Ask me a practice question from a past exam", "What is CS70?"]
     interface = gr.ChatInterface(
             fn=chat_with_bot, 
-            # examples=example_inputs,
+            examples=example_inputs,
             title="CS70 TA",
             description="Ask the TA any question you want about CS70 or use it to quiz yourself!",
             theme=gr.themes.Soft(),
