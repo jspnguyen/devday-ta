@@ -6,10 +6,13 @@ from llama_index.llms.bedrock.base import Bedrock
 from ldclient.config import Config
 from dotenv import load_dotenv
 from ldclient import Context
+from ldclient.config import Config
+
 
 try:
     load_dotenv()
-    ldclient.set_config(Config(os.getenv("ldl_sdk_key")))
+    sdk_key = os.getenv("LAUNCHDARKLY_SDK_KEY")
+    ldclient.set_config(Config(os.getenv("LAUNCHDARKLY_SDK_KEY")))
     client = ldclient.get()
     print("Successfully initialized LDL client.")
     s3_client = boto3.client('s3')
@@ -21,38 +24,14 @@ def rag_query(user_query):
     """
     Queries appropriate documents from AWS knowledge bases using Hybrid RAG vector search
     """
-    context = Context.builder("anonymous").name("anonymous").build()
-    search_flag = client.variation("select_search_type", context, True)
-    
     retriever = AmazonKnowledgeBasesRetriever(
-            knowledge_base_id="YZXPI4CEXE",
-            retrieval_config={
-                "vectorSearchConfiguration": {
-                    "overrideSearchType": f"{search_flag}",
-                }
+        knowledge_base_id="YZXPI4CEXE",
+        retrieval_config={
+            "vectorSearchConfiguration": {
+                "overrideSearchType": "HYBRID",
             }
-        )
-    
-    value_filter = ""
-    if "exam" in user_query.lower() or "midterm" in user_query.lower() or "final" in user_query.lower():
-        value_filter = "exam"
-    elif "homework" in user_query.lower():
-        value_filter = "hw"
-    elif "note" in user_query.lower():
-        value_filter = "note"
-    elif "discussion" in user_query.lower():
-        value_filter = "disc"
-    
-    if value_filter:
-        retriever = AmazonKnowledgeBasesRetriever(
-            knowledge_base_id="YZXPI4CEXE",
-            retrieval_config={
-                "vectorSearchConfiguration": {
-                    "overrideSearchType": f"{search_flag}",
-                    "filter": {"equals": {"key": "type", "value":f"{value_filter}"}},
-                }
-            }
-        )
+        }
+    )
     
     rag_results = retriever.retrieve(user_query)
     return rag_results
@@ -62,9 +41,10 @@ def llm_query(user_query, rag_results):
     Queries response from LLM using RAG results and current LLM model
     """
     context = Context.builder("anonymous").name("anonymous").build()
-    model_flag = client.variation("select_claude_model", context, True)
-    
-    llm = Bedrock(model=model_flag, temperature=0.1, max_tokens=4096)
+    flag_value = client.variation("modelSelection2", context, False)
+    print(flag_value)
+
+    llm = Bedrock(model=flag_value, temperature=0.1, max_tokens=4096)
     
     response_synthesizer = get_response_synthesizer(
         response_mode="compact", llm=llm
@@ -81,7 +61,6 @@ def chat_with_bot(user_input, _):
         "You are a friendly and knowledgeable CS70 TA. "
         "You are patient, encouraging, and always provide detailed explanations. "
         "You enjoy making learning fun and engaging for students."
-        "You adapt your teaching based on the student's understanding of the topic."
     )
     
     formatted_input = f'{personality}\n\nUser prompt:\n{user_input}'
@@ -92,15 +71,16 @@ def chat_with_bot(user_input, _):
     return llm_response
 
 if __name__ == "__main__":
+    
     example_inputs = ["Explain to me Poisson distributions", "Ask me a practice question from a past exam", "What is CS70?"]
     interface = gr.ChatInterface(
             fn=chat_with_bot, 
             examples=example_inputs,
-            title="GradeGuardian",
-            description="Ask the GradeGuardian any question you want about CS70 or use it to quiz yourself!",
+            title="CS70 TA",
+            description="Ask the TA any question you want about CS70 or use it to quiz yourself!",
             theme=gr.themes.Soft(),
             submit_btn="Ask",
-            stop_btn="Stop"
-    )
+            stop_btn="Stop stream"
+        )
     
     interface.launch(share=False)
