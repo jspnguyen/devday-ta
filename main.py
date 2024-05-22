@@ -5,6 +5,7 @@ from llama_index.core import get_response_synthesizer
 from llama_index.llms.bedrock.base import Bedrock
 from ldclient.config import Config
 from dotenv import load_dotenv
+from ldclient import Context
 
 try:
     load_dotenv()
@@ -20,11 +21,14 @@ def rag_query(user_query):
     """
     Queries appropriate documents from AWS knowledge bases using Hybrid RAG vector search
     """
+    context = Context.builder("anonymous").name("anonymous").build()
+    search_flag = client.variation("select_search_type", context, True)
+    
     retriever = AmazonKnowledgeBasesRetriever(
             knowledge_base_id="YZXPI4CEXE",
             retrieval_config={
                 "vectorSearchConfiguration": {
-                    "overrideSearchType": "HYBRID",
+                    "overrideSearchType": f"{search_flag}",
                 }
             }
         )
@@ -44,7 +48,7 @@ def rag_query(user_query):
             knowledge_base_id="YZXPI4CEXE",
             retrieval_config={
                 "vectorSearchConfiguration": {
-                    "overrideSearchType": "HYBRID",
+                    "overrideSearchType": f"{search_flag}",
                     "filter": {"equals": {"key": "type", "value":f"{value_filter}"}},
                 }
             }
@@ -57,7 +61,10 @@ def llm_query(user_query, rag_results):
     """
     Queries response from LLM using RAG results and current LLM model
     """
-    llm = Bedrock(model="anthropic.claude-3-sonnet-20240229-v1:0", temperature=0.1, max_tokens=4096)
+    context = Context.builder("anonymous").name("anonymous").build()
+    model_flag = client.variation("select_claude_model", context, True)
+    
+    llm = Bedrock(model=model_flag, temperature=0.1, max_tokens=4096)
     
     response_synthesizer = get_response_synthesizer(
         response_mode="compact", llm=llm
