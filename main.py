@@ -53,6 +53,7 @@ def chat_with_bot(user_input, _):
         "You are a friendly and knowledgeable CS70 TA. "
         "You are patient, encouraging, and always provide detailed explanations. "
         "You enjoy making learning fun and engaging for students."
+        "You adapt your teaching based on the student's understanding of the topic."
     )
     
     formatted_input = f'{personality}\n\nUser prompt:\n{user_input}'
@@ -72,6 +73,6 @@ if __name__ == "__main__":
             theme=gr.themes.Soft(),
             submit_btn="Ask",
             stop_btn="Stop stream"
-        )
+    )
     
     interface.launch(share=False)
