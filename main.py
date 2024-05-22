@@ -21,13 +21,34 @@ def rag_query(user_query):
     Queries appropriate documents from AWS knowledge bases using Hybrid RAG vector search
     """
     retriever = AmazonKnowledgeBasesRetriever(
-        knowledge_base_id="YZXPI4CEXE",
-        retrieval_config={
-            "vectorSearchConfiguration": {
-                "overrideSearchType": "HYBRID",
+            knowledge_base_id="YZXPI4CEXE",
+            retrieval_config={
+                "vectorSearchConfiguration": {
+                    "overrideSearchType": "HYBRID",
+                }
             }
-        }
-    )
+        )
+    
+    value_filter = ""
+    if "exam" in user_query.lower() or "midterm" in user_query.lower() or "final" in user_query.lower():
+        value_filter = "exam"
+    elif "homework" in user_query.lower():
+        value_filter = "hw"
+    elif "note" in user_query.lower():
+        value_filter = "note"
+    elif "discussion" in user_query.lower():
+        value_filter = "disc"
+    
+    if value_filter:
+        retriever = AmazonKnowledgeBasesRetriever(
+            knowledge_base_id="YZXPI4CEXE",
+            retrieval_config={
+                "vectorSearchConfiguration": {
+                    "overrideSearchType": "HYBRID",
+                    "filter": {"equals": {"key": "type", "value":f"{value_filter}"}},
+                }
+            }
+        )
     
     rag_results = retriever.retrieve(user_query)
     return rag_results
