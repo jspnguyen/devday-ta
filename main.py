@@ -88,11 +88,14 @@ def chat_with_bot(user_input, _):
     
     rag_results = rag_query(formatted_input)
     llm_response = llm_query(formatted_input, rag_results)
+    src_s3_url = rag_results[0].metadata['sourceMetadata']['x-amz-bedrock-kb-source-uri']
+    src_filename = os.path.basename(src_s3_url)
+    full_response = llm_response + '\n\n This response was based on https://www.eecs70.org/assets/pdf/' + src_filename + '. For more information check out the source material!'
     
-    return llm_response
+    return full_response
 
 if __name__ == "__main__":
-    example_inputs = ["Explain to me Poisson distributions", "Ask me a practice question from a past exam", "What topics should I review for the final?"]
+    example_inputs = ["Explain to me Poisson distributions.", "Ask me a practice question from a past exam.", "What topics should I review for the final?"]
     interface = gr.ChatInterface(
             fn=chat_with_bot, 
             examples=example_inputs,
@@ -103,4 +106,4 @@ if __name__ == "__main__":
             stop_btn="Stop"
     )
     
-    interface.launch(share=False)
+    interface.launch(share=True)
