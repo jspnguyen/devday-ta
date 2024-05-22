@@ -72,7 +72,7 @@ def chat_with_bot(user_input, key, val):
     llm_response = llm_query(formatted_input, rag_results)
     src_s3_url = rag_results[0].metadata['sourceMetadata']['x-amz-bedrock-kb-source-uri']
     src_filename = os.path.basename(src_s3_url)
-    full_response = llm_response + '\n This response was based on https://www.eecs70.org/assets/pdf/' + src_filename
+    full_response = llm_response + '\n This response was based on https://www.eecs70.org/assets/pdf/' + src_filename + '. For more information check out the source material!'
     return full_response
 
 # %%
