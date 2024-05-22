@@ -17,7 +17,7 @@ try:
 except Exception as e:
     print(f"Error initializing S3 client: {e}")
 
-def rag_query(user_query):
+def rag_query(user_query, key='course', val='cs70'):
     """
     Queries appropriate documents from AWS knowledge bases using Hybrid RAG vector search
     """
@@ -26,7 +26,7 @@ def rag_query(user_query):
         retrieval_config={
             "vectorSearchConfiguration": {
                 "overrideSearchType": "HYBRID",
-                "filter": {"equals": {"key": "type", "value":"disc"}},
+                "filter": {"equals": {"key": key, "value": val}},
             }
         }
     )
@@ -48,11 +48,15 @@ def llm_query(user_query, rag_results):
     return str(response_obj)
 
 # %%
-#rag_query('what is a poisson distribution?')
-
+outputs = rag_query('what is a poisson distribution?')
 
 # %%
-def chat_with_bot(user_input, _):
+src = outputs[0].metadata['sourceMetadata']['x-amz-bedrock-kb-source-uri']
+filename = os.path.basename(src)
+filename
+
+# %%
+def chat_with_bot(user_input, key, val):
     """
     Handle chatbot responses with users. Control personality and accuracy of the responses.
     """
@@ -64,13 +68,54 @@ def chat_with_bot(user_input, _):
     
     formatted_input = f'{personality}\n\nUser prompt:\n{user_input}'
     
-    rag_results = rag_query(formatted_input)
+    rag_results = rag_query(formatted_input, key, val)
     llm_response = llm_query(formatted_input, rag_results)
-    
-    return llm_response
+    src_s3_url = rag_results[0].metadata['sourceMetadata']['x-amz-bedrock-kb-source-uri']
+    src_filename = os.path.basename(src_s3_url)
+    full_response = llm_response + '\n This response was based on https://www.eecs70.org/assets/pdf/' + src_filename
+    return full_response
 
 # %%
 example_inputs = ["Explain to me Poisson distributions", "Ask me a practice question from a past exam", "What is CS70?"]
+
+with gr.Blocks() as demo:
+    disc = gr.Button("Discussions")
+    exams = gr.Button("Exams")
+    all = gr.Button('Query from Everything')
+    chatbot = gr.Chatbot()
+    msg = gr.Textbox()
+    clear = gr.Button("Clear")
+    
+
+    def respond(user_input, chat_history):
+        bot_text = chat_with_bot(user_input, Filter.key, Filter.val)
+        chat_history.append((user_input, bot_text))
+        return ("", chat_history)
+        
+    def filterset(key, val):
+        Filter.key = key
+        Filter.val = val
+        chatbot.label='now querying from '+val
+
+    class Filter:
+        key = None
+        val = None
+    
+
+    disc.click(filterset('type', 'disc'), None, chatbot)
+    exams.click(filterset('type', 'exam'))
+    all.click(filterset('course', 'cs70'))
+
+    msg.submit(respond, [msg, chatbot], [msg, chatbot], queue=False)
+    clear.click(lambda: None, None, chatbot, queue=False)
+
+    
+demo.queue()
+demo.launch()
+
+
+
+# %%
 interface = gr.ChatInterface(
         fn=chat_with_bot, 
         examples=example_inputs,
