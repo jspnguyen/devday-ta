@@ -15,35 +15,21 @@ try:
 except Exception as e:
     print(f"Error initializing S3 client: {e}")
 
-# Initialize the retriever with the correct configuration
-retriever = AmazonKnowledgeBasesRetriever(
-    knowledge_base_id="YZXPI4CEXE",
-    retrieval_config={
-        "vectorSearchConfiguration": {
-            "overrideSearchType": "HYBRID",
+def rag_query(user_query):
+    retriever = AmazonKnowledgeBasesRetriever(
+        knowledge_base_id="YZXPI4CEXE",
+        retrieval_config={
+            "vectorSearchConfiguration": {
+                "overrideSearchType": "HYBRID",
+            }
         }
-    }
-)
+    )
+    
+    rag_results = retriever.retrieve(user_query)
+    
+    return rag_results
 
-query = "What is a poisson distribution?"
-
-try:
-    # Debugging output to verify input values
-    print("Retrieving results with the following parameters:")
-    print(f"Knowledge Base ID: {retriever.knowledge_base_id}")
-    print(f"Retrieval Config: {retriever.retrieval_config}")
-    print(f"Query: {query}")
-
-    retrieved_results = retriever.retrieve(query)
-
-    # Check if any results were retrieved
-    if retrieved_results:
-        # Prints the first retrieved result
-        print(retrieved_results[0].get_content())
-        print("--------------------------")
-    else:
-        print("No results retrieved.")
-
+def llm_query(user_query, rag_results):
     # Initialize the LLM with the correct model name and parameters
     llm = Bedrock(model="anthropic.claude-v2", temperature=0, max_tokens=3000)
     response_synthesizer = get_response_synthesizer(
@@ -51,13 +37,11 @@ try:
     )
 
     # Synthesize response
-    response_obj = response_synthesizer.synthesize(query, retrieved_results)
-    print(response_obj)
+    response_obj = response_synthesizer.synthesize(user_query, rag_results)
+    return(response_obj)
 
-except boto3.exceptions.Boto3Error as e:
-    print(f"An AWS error occurred: {e}")
-except Exception as e:
-    print(f"An error occurred: {e}")
-
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    user_query = str(input("Enter your question: "))
+    rag_results = rag_query(user_query)
+    llm_response = llm_query(user_query, rag_results)
+    print(llm_response)
