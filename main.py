@@ -1,63 +1,77 @@
-import gradio, llama_index, boto3, ldclient, os
+import boto3, ldclient, os
+import gradio as gr
 from llama_index.retrievers.bedrock import AmazonKnowledgeBasesRetriever
 from llama_index.core import get_response_synthesizer
 from llama_index.llms.bedrock.base import Bedrock
 from ldclient.config import Config
 from dotenv import load_dotenv
 
-# load_dotenv()
-# ldclient.set_config(Config(os.getenv("ldl_sdk_key")))
-# client = ldclient.get()
-
 try:
+    load_dotenv()
+    ldclient.set_config(Config(os.getenv("ldl_sdk_key")))
+    client = ldclient.get()
+    print("Successfully initialized LDL client.")
     s3_client = boto3.client('s3')
     print("Successfully initialized S3 client.")
 except Exception as e:
     print(f"Error initializing S3 client: {e}")
 
-# Initialize the retriever with the correct configuration
-retriever = AmazonKnowledgeBasesRetriever(
-    knowledge_base_id="YZXPI4CEXE",
-    retrieval_config={
-        "vectorSearchConfiguration": {
-            "overrideSearchType": "HYBRID",
+def rag_query(user_query):
+    """
+    Queries appropriate documents from AWS knowledge bases using Hybrid RAG vector search
+    """
+    retriever = AmazonKnowledgeBasesRetriever(
+        knowledge_base_id="YZXPI4CEXE",
+        retrieval_config={
+            "vectorSearchConfiguration": {
+                "overrideSearchType": "HYBRID",
+            }
         }
-    }
-)
+    )
+    
+    rag_results = retriever.retrieve(user_query)
+    return rag_results
 
-query = "What is a poisson distribution?"
-
-try:
-    # Debugging output to verify input values
-    print("Retrieving results with the following parameters:")
-    print(f"Knowledge Base ID: {retriever.knowledge_base_id}")
-    print(f"Retrieval Config: {retriever.retrieval_config}")
-    print(f"Query: {query}")
-
-    retrieved_results = retriever.retrieve(query)
-
-    # Check if any results were retrieved
-    if retrieved_results:
-        # Prints the first retrieved result
-        print(retrieved_results[0].get_content())
-        print("--------------------------")
-    else:
-        print("No results retrieved.")
-
-    # Initialize the LLM with the correct model name and parameters
-    llm = Bedrock(model="anthropic.claude-v2", temperature=0, max_tokens=3000)
+def llm_query(user_query, rag_results):
+    """
+    Queries response from LLM using RAG results and current LLM model
+    """
+    llm = Bedrock(model="anthropic.claude-3-sonnet-20240229-v1:0", temperature=0.1, max_tokens=4096)
+    
     response_synthesizer = get_response_synthesizer(
         response_mode="compact", llm=llm
     )
 
-    # Synthesize response
-    response_obj = response_synthesizer.synthesize(query, retrieved_results)
-    print(response_obj)
+    response_obj = response_synthesizer.synthesize(user_query, rag_results)
+    return str(response_obj)
 
-except boto3.exceptions.Boto3Error as e:
-    print(f"An AWS error occurred: {e}")
-except Exception as e:
-    print(f"An error occurred: {e}")
+def chat_with_bot(user_input, _):
+    """
+    Handle chatbot responses with users. Control personality and accuracy of the responses.
+    """
+    personality = (
+        "You are a friendly and knowledgeable CS70 TA. "
+        "You are patient, encouraging, and always provide detailed explanations. "
+        "You enjoy making learning fun and engaging for students."
+    )
+    
+    formatted_input = f'{personality}\n\nUser prompt:\n{user_input}'
+    
+    rag_results = rag_query(formatted_input)
+    llm_response = llm_query(formatted_input, rag_results)
+    
+    return llm_response
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    example_inputs = ["Explain to me Poisson distributions", "Ask me a practice question from a past exam", "What is CS70?"]
+    interface = gr.ChatInterface(
+            fn=chat_with_bot, 
+            examples=example_inputs,
+            title="CS70 TA",
+            description="Ask the TA any question you want about CS70 or use it to quiz yourself!",
+            theme=gr.themes.Soft(),
+            submit_btn="Ask",
+            stop_btn="Stop stream"
+        )
+    
+    interface.launch(share=False)
