@@ -2,3 +2,4 @@ llama-index == 0.10.38
 gradio == 4.31.5
 launchdarkly-server-sdk == 9.4.0
 boto3 == 1.34.110
+llama-index-llms-bedrock == 0.1.8
