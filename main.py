@@ -92,7 +92,7 @@ def chat_with_bot(user_input, _):
     return llm_response
 
 if __name__ == "__main__":
-    example_inputs = ["Explain to me Poisson distributions", "Ask me a practice question from a past exam", "What is CS70?"]
+    example_inputs = ["Explain to me Poisson distributions", "Ask me a practice question from a past exam", "What topics should I review for the final?"]
     interface = gr.ChatInterface(
             fn=chat_with_bot, 
             examples=example_inputs,
