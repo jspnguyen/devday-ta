@@ -96,11 +96,11 @@ if __name__ == "__main__":
     interface = gr.ChatInterface(
             fn=chat_with_bot, 
             examples=example_inputs,
-            title="CS70 TA",
-            description="Ask the TA any question you want about CS70 or use it to quiz yourself!",
+            title="GradeGuardian",
+            description="Ask the GradeGuardian any question you want about CS70 or use it to quiz yourself!",
             theme=gr.themes.Soft(),
             submit_btn="Ask",
-            stop_btn="Stop stream"
+            stop_btn="Stop"
     )
     
     interface.launch(share=False)
