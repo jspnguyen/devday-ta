@@ -17,7 +17,7 @@ try:
 except Exception as e:
     print(f"Error initializing S3 client: {e}")
 
-def rag_query(user_query):
+def rag_query(user_query: str) -> str:
     """
     Queries appropriate documents from AWS knowledge bases using Hybrid RAG vector search
     """
@@ -57,7 +57,7 @@ def rag_query(user_query):
     rag_results = retriever.retrieve(user_query)
     return rag_results
 
-def llm_query(user_query, rag_results):
+def llm_query(user_query: str, rag_results: str) -> str:
     """
     Queries response from LLM using RAG results and current LLM model
     """
@@ -73,7 +73,7 @@ def llm_query(user_query, rag_results):
     response_obj = response_synthesizer.synthesize(user_query, rag_results)
     return str(response_obj)
 
-def chat_with_bot(user_input, _):
+def chat_with_bot(user_input: str, _) -> str:
     """
     Handle chatbot responses with users. Control personality and accuracy of the responses.
     """
